@@ -1,0 +1,23 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Camera</ion-title>
+    <ion-button slot="end" fill="clear" (click)="closeModal()">
+      <ion-icon name="close"></ion-icon>
+    </ion-button>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="camera-container">
+    <video #videoElement autoplay playsinline></video>
+  </div>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-button expand="block" (click)="captureImage()">
+      <ion-icon slot="start" name="camera"></ion-icon>
+      Capture
+    </ion-button>
+  </ion-toolbar>
+</ion-footer>
