@@ -1,0 +1,94 @@
+.result-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+}
+
+.image-container {
+  margin-bottom: 24px;
+  
+  .image-placeholder {
+    width: 100%;
+    height: 250px;
+    background-color: var(--ion-color-light);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 2px dashed var(--ion-color-medium);
+    
+    ion-icon {
+      font-size: 64px;
+      color: var(--ion-color-medium);
+      margin-bottom: 16px;
+    }
+    
+    p {
+      color: var(--ion-color-medium);
+      font-size: 16px;
+    }
+  }
+}
+
+.detection-result {
+  margin-bottom: 24px;
+  
+  ion-card {
+    margin: 0;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .object-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ion-color-primary);
+  }
+  
+  .confidence-meter {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+    
+    span {
+      font-size: 14px;
+      color: var(--ion-color-medium);
+    }
+    
+    ion-progress-bar {
+      flex: 1;
+      margin: 0 12px;
+      --buffer-background: var(--ion-color-light);
+      --progress-background: var(--ion-color-success);
+      height: 8px;
+      border-radius: 4px;
+    }
+    
+    .confidence-value {
+      font-weight: 600;
+      color: var(--ion-color-dark);
+    }
+  }
+  
+  .voice-feedback {
+    .voice-button {
+      --background: var(--ion-color-tertiary);
+      height: 48px;
+      font-weight: 600;
+    }
+  }
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  
+  .action-button {
+    height: 48px;
+    font-weight: 600;
+    --border-radius: 12px;
+  }
+}

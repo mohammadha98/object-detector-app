@@ -1,3 +1,54 @@
-<p>
-  result works!
-</p>
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Detection Result</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  <div class="result-container">
+    <div class="image-container">
+      <!-- Placeholder for the captured image -->
+      <div class="image-placeholder">
+        <ion-icon name="image-outline"></ion-icon>
+        <p>Captured Image</p>
+      </div>
+    </div>
+
+    <div class="detection-result">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-subtitle>Detected Object</ion-card-subtitle>
+          <ion-card-title class="object-name">Object Name</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="confidence-meter">
+            <span>Confidence:</span>
+            <ion-progress-bar value="0.85"></ion-progress-bar>
+            <span class="confidence-value">85%</span>
+          </div>
+
+          <div class="voice-feedback">
+            <ion-button expand="block" class="voice-button" (click)="playVoiceFeedback()">
+              <ion-icon slot="start" name="volume-high"></ion-icon>
+              Hear Result
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <div class="action-buttons">
+      <ion-button expand="block" fill="outline" class="action-button" (click)="captureAgain()">
+        <ion-icon slot="start" name="camera"></ion-icon>
+        Capture Again
+      </ion-button>
+      <ion-button expand="block" class="action-button" (click)="shareResult()">
+        <ion-icon slot="start" name="share"></ion-icon>
+        Share Result
+      </ion-button>
+    </div>
+  </div>
+</ion-content>
