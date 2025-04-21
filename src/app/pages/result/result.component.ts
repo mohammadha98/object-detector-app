@@ -18,6 +18,9 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { camera, imageOutline, volumeHigh, share } from 'ionicons/icons';
+import { VoiceService } from '../../services/voice.service';
+import { PlaySoundComponent } from '../play-sound/play-sound.component';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-result',
@@ -39,15 +42,24 @@ import { camera, imageOutline, volumeHigh, share } from 'ionicons/icons';
     IonIcon,
     IonProgressBar,
     IonBackButton,
-    IonButtons
+    IonButtons,
+    PlaySoundComponent
   ]
 })
 export class ResultComponent implements OnInit {
-  // Placeholder properties for the detected object
-  objectName: string = 'Object Name';
-  confidence: number = 0.85;
+  // Properties for the detected object
+  objectName: string = 'Object';
+  description: string = '';
+  confidence: number = 0.95;
+  audioUrl: string = '';
+  isPlaying: boolean = false;
+  audioElement: HTMLAudioElement | null = null;
+  imageFile: File | null = null;
 
-  constructor() {
+  constructor(
+    private voiceService: VoiceService,
+    private router: Router
+  ) {
     // Initialize icons
     addIcons({
       camera,
@@ -55,25 +67,59 @@ export class ResultComponent implements OnInit {
       volumeHigh,
       share
     });
+
+    // Get the navigation state data
+    const navigation = this.router.getCurrentNavigation();
+    const state = navigation?.extras.state as {
+      description: string;
+      audioUrl: string;
+      imageFile: File;
+    };
+
+    if (state) {
+      this.description = state.description;
+      this.audioUrl = state.audioUrl;
+      this.imageFile = state.imageFile;
+    }
   }
 
-  ngOnInit() {}
 
-  // Placeholder for voice feedback functionality
+  ngOnInit() {
+    if (this.audioUrl) {
+      // Create audio element
+      this.audioElement = new Audio(this.audioUrl);
+
+      // Add event listeners
+      this.audioElement.addEventListener('ended', () => {
+        this.isPlaying = false;
+      });
+
+      this.audioElement.addEventListener('error', (e) => {
+        console.error('Audio playback error:', e);
+        this.isPlaying = false;
+      });
+
+      // Auto-play the audio when the component loads
+      this.playVoiceFeedback();
+    }
+  }
+
+
+  // Play audio description
   playVoiceFeedback() {
-    console.log('Playing voice feedback for:', this.objectName);
-    // In a real implementation, this would use text-to-speech to read out the object name
+    if (!this.audioElement || this.isPlaying) return;
+
+    this.isPlaying = true;
+    this.audioElement.play().catch(error => {
+      console.error('Error playing audio:', error);
+      this.isPlaying = false;
+    });
   }
 
-  // Placeholder for capture again functionality
+  // Navigate back to capture screen
   captureAgain() {
     console.log('Navigating back to capture screen');
-    // In a real implementation, this would navigate back to the home/camera screen
+    this.router.navigate(['/home']);
   }
 
-  // Placeholder for share functionality
-  shareResult() {
-    console.log('Sharing detection result');
-    // In a real implementation, this would open the native share dialog
-  }
 }

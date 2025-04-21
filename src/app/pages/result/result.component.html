@@ -21,19 +21,19 @@
       <ion-card>
         <ion-card-header>
           <ion-card-subtitle>Detected Object</ion-card-subtitle>
-          <ion-card-title class="object-name">Object Name</ion-card-title>
+          <ion-card-title class="object-name">{{ objectName }}</ion-card-title>
         </ion-card-header>
         <ion-card-content>
-          <div class="confidence-meter">
-            <span>Confidence:</span>
-            <ion-progress-bar value="0.85"></ion-progress-bar>
-            <span class="confidence-value">85%</span>
+      
+          
+          <div class="description-container">
+            <p class="description-text">{{ description }}</p>
           </div>
 
           <div class="voice-feedback">
-            <ion-button expand="block" class="voice-button" (click)="playVoiceFeedback()">
+            <ion-button expand="block" class="voice-button" (click)="playVoiceFeedback()" [disabled]="isPlaying">
               <ion-icon slot="start" name="volume-high"></ion-icon>
-              Hear Result
+              {{ isPlaying ? 'Playing...' : 'Hear Description' }}
             </ion-button>
           </div>
         </ion-card-content>
@@ -45,10 +45,7 @@
         <ion-icon slot="start" name="camera"></ion-icon>
         Capture Again
       </ion-button>
-      <ion-button expand="block" class="action-button" (click)="shareResult()">
-        <ion-icon slot="start" name="share"></ion-icon>
-        Share Result
-      </ion-button>
+
     </div>
   </div>
 </ion-content>

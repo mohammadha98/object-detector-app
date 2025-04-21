@@ -1,23 +1,40 @@
 <ion-header>
   <ion-toolbar>
     <ion-title>Camera</ion-title>
-    <ion-button slot="end" fill="clear" (click)="closeModal()">
+    <ion-button slot="end" fill="clear">
       <ion-icon name="close"></ion-icon>
     </ion-button>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <div class="camera-container">
+  <div class="camera-container" [class.loading]="isLoading">
     <video #videoElement autoplay playsinline></video>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" *ngIf="isLoading">
+      <ion-spinner name="circular"></ion-spinner>
+      <p>Analyzing image...</p>
+    </div>
+
+    <!-- Error Overlay -->
+    <div class="error-overlay" *ngIf="hasError">
+      <ion-icon name="alert-circle-outline" color="danger"></ion-icon>
+      <h2>Analysis Failed</h2>
+      <p>Something went wrong while analyzing the image.</p>
+      <ion-button (click)="retryCapture()" color="primary">
+        <ion-icon slot="start" name="refresh"></ion-icon>
+        Try Again
+      </ion-button>
+    </div>
   </div>
 </ion-content>
 
 <ion-footer>
   <ion-toolbar>
-    <ion-button expand="block" (click)="captureImage()">
+    <ion-button expand="block" (click)="captureImage()" [disabled]="isLoading">
       <ion-icon slot="start" name="camera"></ion-icon>
-      Capture
+      {{ isLoading ? 'Processing...' : 'Capture' }}
     </ion-button>
   </ion-toolbar>
 </ion-footer>
