@@ -102,19 +102,45 @@ export class CameraModalComponent implements OnInit, OnDestroy {
 
     // Create canvas to capture the image
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    
+    // Compress image by reducing dimensions
+    // Target max width/height (adjust these values based on your needs)
+    const maxWidth = 800;
+    const maxHeight = 600;
+    
+    // Calculate new dimensions while maintaining aspect ratio
+    let width = video.videoWidth;
+    let height = video.videoHeight;
+    
+    if (width > height) {
+      if (width > maxWidth) {
+        height = Math.round(height * (maxWidth / width));
+        width = maxWidth;
+      }
+    } else {
+      if (height > maxHeight) {
+        width = Math.round(width * (maxHeight / height));
+        height = maxHeight;
+      }
+    }
+    
+    // Set canvas to the new dimensions
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Draw the video frame onto the resized canvas
     const ctx = canvas.getContext('2d');
-    ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx?.drawImage(video, 0, 0, width, height);
 
     try {
-      // Convert canvas to blob
+      // Convert canvas to blob with reduced quality (0.7 instead of 0.95)
       const blob = await new Promise<Blob>((resolve) => {
         canvas.toBlob((blob) => {
           resolve(blob as Blob);
-        }, 'image/jpeg', 0.95);
+        }, 'image/jpeg', 0.7); // Reduced quality for better compression
       });
 
+      console.log(`Compressed image size: ${Math.round(blob.size / 1024)} KB`);
       const imageFile = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' });
       
       // Send the file to the API service and navigate to result page
@@ -148,5 +174,9 @@ export class CameraModalComponent implements OnInit, OnDestroy {
   retryCapture() {
     this.hasError = false;
     this.captureImage();
+  }
+
+  closeModal() {
+    this.modalController.dismiss();
   }
 }

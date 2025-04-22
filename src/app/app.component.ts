@@ -1,13 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { IonApp, IonRouterOutlet, IonCard, IonCardContent } from '@ionic/angular/standalone';
-import { PlaySoundComponent } from './pages/play-sound/play-sound.component';
+import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 
-interface AudioData {
-  label: string;
-  audio_base64: string;
-}
 
 @Component({
   selector: 'app-root',
@@ -22,8 +16,6 @@ interface AudioData {
   ],
 })
 export class AppComponent implements OnInit {
-
-
 
 
   ngOnInit() {

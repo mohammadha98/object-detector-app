@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   IonHeader,
@@ -7,7 +7,6 @@ import {
   IonContent,
   IonCard,
   IonCardHeader,
-  IonCardTitle,
   IonCardSubtitle,
   IonCardContent,
   IonButton,
@@ -19,7 +18,6 @@ import {
 import { addIcons } from 'ionicons';
 import { camera, imageOutline, volumeHigh, share } from 'ionicons/icons';
 import { VoiceService } from '../../services/voice.service';
-import { PlaySoundComponent } from '../play-sound/play-sound.component';
 import { Router } from '@angular/router';
 
 @Component({
@@ -35,29 +33,28 @@ import { Router } from '@angular/router';
     IonContent,
     IonCard,
     IonCardHeader,
-    IonCardTitle,
+ 
     IonCardSubtitle,
     IonCardContent,
     IonButton,
     IonIcon,
-    IonProgressBar,
+
     IonBackButton,
     IonButtons,
-    PlaySoundComponent
   ]
 })
-export class ResultComponent implements OnInit {
+export class ResultComponent implements OnInit, OnDestroy {
   // Properties for the detected object
-  objectName: string = 'Object';
   description: string = '';
-  confidence: number = 0.95;
+  fullDescription: string = ''; // Store the full description
   audioUrl: string = '';
   isPlaying: boolean = false;
   audioElement: HTMLAudioElement | null = null;
   imageFile: File | null = null;
+  private typingInterval: any; // Interval for typing effect
+  private typingSpeed = 50; // Milliseconds per character
 
   constructor(
-    private voiceService: VoiceService,
     private router: Router
   ) {
     // Initialize icons
@@ -77,33 +74,67 @@ export class ResultComponent implements OnInit {
     };
 
     if (state) {
-      this.description = state.description;
+      this.fullDescription = state.description; // Store full description
       this.audioUrl = state.audioUrl;
       this.imageFile = state.imageFile;
+    } else {
+      // Handle case where state is missing, maybe navigate back or show error
+      console.error('Result component loaded without state.');
+      this.fullDescription = 'No description available.'; // Default or error message
     }
   }
 
 
   ngOnInit() {
     if (this.audioUrl) {
-      // Create audio element
       this.audioElement = new Audio(this.audioUrl);
-
-      // Add event listeners
       this.audioElement.addEventListener('ended', () => {
         this.isPlaying = false;
       });
-
       this.audioElement.addEventListener('error', (e) => {
         console.error('Audio playback error:', e);
         this.isPlaying = false;
       });
-
-      // Auto-play the audio when the component loads
-      this.playVoiceFeedback();
+      // Wait for audio metadata to load to get duration
+      this.audioElement.addEventListener('loadedmetadata', () => {
+        if (this.audioElement && this.audioElement.duration && this.fullDescription.length > 0) {
+          // Calculate typingSpeed so that the typing effect matches the audio duration
+          this.typingSpeed = (this.audioElement.duration * 1000) / this.fullDescription.length;
+        }
+        this.startTypingEffect();
+        this.playVoiceFeedback();
+      });
+    } else {
+      this.startTypingEffect();
     }
   }
 
+  ngOnDestroy() {
+    // Clear the interval when the component is destroyed
+    if (this.typingInterval) {
+      clearInterval(this.typingInterval);
+    }
+    // Stop audio if playing
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement.currentTime = 0;
+    }
+  }
+
+  // Start the typing effect for the description
+  startTypingEffect() {
+    let index = 0;
+    this.description = ''; // Start with empty description
+
+    this.typingInterval = setInterval(() => {
+      if (index < this.fullDescription.length) {
+        this.description += this.fullDescription.charAt(index);
+        index++;
+      } else {
+        clearInterval(this.typingInterval); // Stop when done
+      }
+    }, this.typingSpeed);
+  }
 
   // Play audio description
   playVoiceFeedback() {

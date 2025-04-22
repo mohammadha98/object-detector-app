@@ -32,13 +32,24 @@
     </div>
 
     <div class="recent-section">
-      <h2>Recent Detections</h2>
-      <ion-card class="no-results" *ngIf="true">
-        <ion-card-content>
-          <ion-icon name="images-outline"></ion-icon>
-          <p>Your detected objects will appear here</p>
+
+      <ion-card class="no-results upload-card" (click)="fileInput.click()" *ngIf="true">
+        <ion-card-content class="upload-content">
+          <div class="upload-icon-container">
+            <ion-icon name="cloud-upload-outline" class="animated-icon"></ion-icon>
+          </div>
+          <p class="upload-text">Upload an image from your device</p>
+          <input type="file" accept="image/*" (change)="handleFileUpload($event)" style="display: none;" #fileInput>
+          
+          <!-- Loading Overlay -->
+          <div class="loading-overlay" *ngIf="isLoading">
+            <ion-spinner name="circular"></ion-spinner>
+            <p>Analyzing image...</p>
+          </div>
         </ion-card-content>
       </ion-card>
+
+
     </div>
   </div>
 </ion-content>
