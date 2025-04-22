@@ -11,14 +11,13 @@ import {
   IonCardContent,
   IonButton,
   IonIcon,
-  IonProgressBar,
   IonBackButton,
   IonButtons
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { camera, imageOutline, volumeHigh, share } from 'ionicons/icons';
-import { VoiceService } from '../../services/voice.service';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-result',
@@ -33,31 +32,28 @@ import { Router } from '@angular/router';
     IonContent,
     IonCard,
     IonCardHeader,
- 
     IonCardSubtitle,
     IonCardContent,
     IonButton,
     IonIcon,
-
     IonBackButton,
     IonButtons,
   ]
 })
 export class ResultComponent implements OnInit, OnDestroy {
-  // Properties for the detected object
   description: string = '';
-  fullDescription: string = ''; // Store the full description
+  fullDescription: string = '';
   audioUrl: string = '';
   isPlaying: boolean = false;
   audioElement: HTMLAudioElement | null = null;
   imageFile: File | null = null;
-  private typingInterval: any; // Interval for typing effect
-  private typingSpeed = 50; // Milliseconds per character
+  private typingInterval: any;
+  private typingSpeed = 50;
+  private navigationSubscription: any;
 
   constructor(
     private router: Router
   ) {
-    // Initialize icons
     addIcons({
       camera,
       imageOutline,
@@ -65,78 +61,116 @@ export class ResultComponent implements OnInit, OnDestroy {
       share
     });
 
-    // Get the navigation state data
+    // Subscribe to router events to detect when component is reused
+    this.navigationSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.initializeData();
+      });
+  }
+
+  private initializeData() {
+    // Reset previous state
+    this.reset();
+    
     const navigation = this.router.getCurrentNavigation();
     const state = navigation?.extras.state as {
       description: string;
       audioUrl: string;
       imageFile: File;
     };
-
+  
     if (state) {
-      this.fullDescription = state.description; // Store full description
-      this.audioUrl = state.audioUrl;
+      this.fullDescription = state.description;
+      // Append a unique query parameter to the audio URL to prevent caching
+      this.audioUrl = `${state.audioUrl}?t=${new Date().getTime()}`;
       this.imageFile = state.imageFile;
+      this.setupAudio();
     } else {
-      // Handle case where state is missing, maybe navigate back or show error
       console.error('Result component loaded without state.');
-      this.fullDescription = 'No description available.'; // Default or error message
+      this.fullDescription = 'No description available.';
     }
   }
 
-
-  ngOnInit() {
+  private setupAudio() {
+    // Ensure any existing audio element is properly cleaned up
+    if (this.audioElement) {
+      // Remove all event listeners to prevent memory leaks
+      this.audioElement.removeEventListener('ended', () => {});
+      this.audioElement.removeEventListener('error', () => {});
+      this.audioElement.removeEventListener('loadedmetadata', () => {});
+      
+      // Stop playback and reset
+      this.audioElement.pause();
+      this.audioElement.src = '';
+      this.audioElement.load();
+      this.audioElement = null;
+    }
+    
+    // Revoke any existing object URLs to prevent memory leaks
+    if (this.audioUrl && this.audioUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(this.audioUrl);
+    }
+    
     if (this.audioUrl) {
+      // Create a completely new audio element with the new URL
       this.audioElement = new Audio(this.audioUrl);
-      this.audioElement.addEventListener('ended', () => {
+      
+      // Add event listeners to the new audio element
+      const endedHandler = () => {
         this.isPlaying = false;
-      });
-      this.audioElement.addEventListener('error', (e) => {
+      };
+      
+      const errorHandler = (e: Event) => {
         console.error('Audio playback error:', e);
         this.isPlaying = false;
-      });
-      // Wait for audio metadata to load to get duration
-      this.audioElement.addEventListener('loadedmetadata', () => {
+      };
+      
+      const metadataHandler = () => {
         if (this.audioElement && this.audioElement.duration && this.fullDescription.length > 0) {
-          // Calculate typingSpeed so that the typing effect matches the audio duration
           this.typingSpeed = (this.audioElement.duration * 1000) / this.fullDescription.length;
         }
         this.startTypingEffect();
         this.playVoiceFeedback();
-      });
+      };
+      
+      this.audioElement.addEventListener('ended', endedHandler);
+      this.audioElement.addEventListener('error', errorHandler);
+      this.audioElement.addEventListener('loadedmetadata', metadataHandler);
     } else {
       this.startTypingEffect();
     }
   }
 
+  ngOnInit() {
+    this.initializeData();
+  }
+
   ngOnDestroy() {
-    // Clear the interval when the component is destroyed
+    if (this.navigationSubscription) {
+      this.navigationSubscription.unsubscribe();
+    }
+    this.reset();
+  }
+
+  startTypingEffect() {
+    let index = 0;
+    this.description = '';
+
     if (this.typingInterval) {
       clearInterval(this.typingInterval);
     }
-    // Stop audio if playing
-    if (this.audioElement) {
-      this.audioElement.pause();
-      this.audioElement.currentTime = 0;
-    }
-  }
-
-  // Start the typing effect for the description
-  startTypingEffect() {
-    let index = 0;
-    this.description = ''; // Start with empty description
 
     this.typingInterval = setInterval(() => {
       if (index < this.fullDescription.length) {
         this.description += this.fullDescription.charAt(index);
         index++;
       } else {
-        clearInterval(this.typingInterval); // Stop when done
+        clearInterval(this.typingInterval);
       }
     }, this.typingSpeed);
   }
 
-  // Play audio description
   playVoiceFeedback() {
     if (!this.audioElement || this.isPlaying) return;
 
@@ -147,10 +181,37 @@ export class ResultComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Navigate back to capture screen
-  captureAgain() {
-    console.log('Navigating back to capture screen');
-    this.router.navigate(['/home']);
+  reset() {
+    if (this.typingInterval) {
+      clearInterval(this.typingInterval);
+    }
+    if (this.audioElement) {
+      // Remove all event listeners to prevent memory leaks
+      this.audioElement.removeEventListener('ended', () => {});
+      this.audioElement.removeEventListener('error', () => {});
+      this.audioElement.removeEventListener('loadedmetadata', () => {});
+      
+      // Stop playback and reset
+      this.audioElement.pause();
+      this.audioElement.src = '';
+      this.audioElement.load();
+      this.audioElement.currentTime = 0;
+      this.audioElement = null;
+    }
+    
+    // Revoke any existing object URLs to prevent memory leaks
+    if (this.audioUrl && this.audioUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(this.audioUrl);
+    }
+    
+    this.description = '';
+    this.isPlaying = false;
+    this.audioUrl = '';
   }
 
+  captureAgain() {
+    console.log('Navigating back to capture screen');
+    this.reset();
+    this.router.navigate(['/home']);
+  }
 }
