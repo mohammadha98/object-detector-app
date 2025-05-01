@@ -10,6 +10,18 @@
 <ion-content>
   <div class="camera-container" [class.loading]="isLoading">
     <video #videoElement autoplay playsinline></video>
+    <canvas #canvasElement class="analysis-canvas"></canvas>
+    
+    <!-- Stability Indicator -->
+    <div class="stability-indicator" *ngIf="stableProgress > 0 && !isLoading">
+      <div class="stability-progress">
+        <div class="progress-bar" [style.width.%]="stableProgress"></div>
+      </div>
+      <div class="stability-text" *ngIf="isStable">
+        <ion-icon name="checkmark-circle" color="success"></ion-icon>
+        Image is stable
+      </div>
+    </div>
     
     <!-- Loading Overlay -->
     <div class="loading-overlay" *ngIf="isLoading">

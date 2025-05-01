@@ -12,7 +12,7 @@ import {
   IonSpinner
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { camera, close } from 'ionicons/icons';
+import { camera, close, checkmarkCircle } from 'ionicons/icons';
 import { ApiService } from 'src/app/services/api.service';
 import { Router } from '@angular/router';
 
@@ -35,16 +35,28 @@ import { Router } from '@angular/router';
 })
 export class CameraModalComponent implements OnInit, OnDestroy {
   @ViewChild('videoElement') videoElement!: ElementRef;
+  @ViewChild('canvasElement') canvasElement!: ElementRef;
   apiService = inject(ApiService);
   router = inject(Router);
   stream: MediaStream | null = null;
   isLoading: boolean = false;
   hasError: boolean = false;
+  
+  // Stability detection properties
+  private stabilityCheckInterval: any;
+  private stableStartTime: number | null = null;
+  private previousImageData: ImageData | null = null;
+  private stabilityThreshold = 5; // Percentage of pixels that can change while still considering the image stable
+  private requiredStableTime = 5000; // 5 seconds in milliseconds
+  isStable: boolean = false;
+  stableTimeElapsed: number = 0;
+  stableProgress: number = 0;
 
   constructor(private modalController: ModalController) {
     addIcons({
       camera,
-      close
+      close,
+      checkmarkCircle
     });
   }
 
@@ -54,6 +66,7 @@ export class CameraModalComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopCamera();
+    this.stopStabilityCheck();
   }
 
   async startCamera() {
@@ -76,6 +89,11 @@ export class CameraModalComponent implements OnInit, OnDestroy {
       // Set the stream to the video element
       if (this.videoElement && this.videoElement.nativeElement) {
         this.videoElement.nativeElement.srcObject = this.stream;
+        
+        // Wait for video to be ready before starting stability check
+        this.videoElement.nativeElement.onloadedmetadata = () => {
+          this.startStabilityCheck();
+        };
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
@@ -88,6 +106,138 @@ export class CameraModalComponent implements OnInit, OnDestroy {
       tracks.forEach(track => track.stop());
       this.stream = null;
     }
+  }
+
+  /**
+   * Starts checking for camera feed stability
+   * Analyzes frames at regular intervals to detect if the image is stable
+   */
+  startStabilityCheck() {
+    // Clear any existing interval
+    this.stopStabilityCheck();
+    
+    // Reset stability tracking
+    this.stableStartTime = null;
+    this.previousImageData = null;
+    this.isStable = false;
+    this.stableTimeElapsed = 0;
+    this.stableProgress = 0;
+    
+    // Start checking for stability every 200ms
+    this.stabilityCheckInterval = setInterval(() => {
+      this.checkImageStability();
+    }, 200);
+  }
+  
+  /**
+   * Stops the stability check interval
+   */
+  stopStabilityCheck() {
+    if (this.stabilityCheckInterval) {
+      clearInterval(this.stabilityCheckInterval);
+      this.stabilityCheckInterval = null;
+    }
+  }
+  
+  /**
+   * Checks if the current camera frame is stable compared to the previous frame
+   * If stable for the required time, logs a message and updates UI
+   */
+  checkImageStability() {
+    if (!this.videoElement || !this.canvasElement) return;
+    
+    const video = this.videoElement.nativeElement;
+    const canvas = this.canvasElement.nativeElement;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    
+    // Ensure video is playing and has dimensions
+    if (video.readyState !== video.HAVE_ENOUGH_DATA || !video.videoWidth) return;
+    
+    // Set canvas dimensions to match video
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+    
+    // Draw current video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Get image data for analysis
+    const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // If we have a previous frame to compare with
+    if (this.previousImageData) {
+      const isCurrentlyStable = this.compareFrames(this.previousImageData, currentImageData);
+      
+      const currentTime = Date.now();
+      
+      if (isCurrentlyStable) {
+        // If we just became stable, record the start time
+        if (this.stableStartTime === null) {
+          this.stableStartTime = currentTime;
+        }
+        
+        // Calculate how long we've been stable
+        const stableTime = currentTime - this.stableStartTime;
+        this.stableTimeElapsed = stableTime;
+        this.stableProgress = Math.min(100, (stableTime / this.requiredStableTime) * 100);
+        
+        // If stable for required time
+        if (stableTime >= this.requiredStableTime && !this.isStable) {
+          console.log('Camera feed has been stable for 5 seconds');
+          this.isStable = true;
+          
+          // Optional: Auto-capture when stable
+          // this.captureImage();
+        }
+      } else {
+        // Reset stability tracking if movement detected
+        this.stableStartTime = null;
+        this.stableTimeElapsed = 0;
+        this.stableProgress = 0;
+        this.isStable = false;
+      }
+    }
+    
+    // Save current frame for next comparison
+    this.previousImageData = currentImageData;
+  }
+  
+  /**
+   * Compares two frames to determine if the image is stable
+   * @param previous Previous frame's ImageData
+   * @param current Current frame's ImageData
+   * @returns true if the frames are similar enough to be considered stable
+   */
+  compareFrames(previous: ImageData, current: ImageData): boolean {
+    // Skip pixels for performance (check every 10th pixel)
+    const pixelStep = 10;
+    const data1 = previous.data;
+    const data2 = current.data;
+    
+    let diffPixels = 0;
+    let totalPixelsChecked = 0;
+    
+    // Compare pixels (RGBA values)
+    for (let i = 0; i < data1.length; i += 4 * pixelStep) {
+      totalPixelsChecked++;
+      
+      // Calculate difference in RGB values (ignore alpha)
+      const diffR = Math.abs(data1[i] - data2[i]);
+      const diffG = Math.abs(data1[i + 1] - data2[i + 1]);
+      const diffB = Math.abs(data1[i + 2] - data2[i + 2]);
+      
+      // If any color channel has changed significantly
+      if (diffR > 25 || diffG > 25 || diffB > 25) {
+        diffPixels++;
+      }
+    }
+    
+    // Calculate percentage of pixels that changed
+    const percentChanged = (diffPixels / totalPixelsChecked) * 100;
+    
+    // Image is stable if percentage of changed pixels is below threshold
+    return percentChanged < this.stabilityThreshold;
   }
 
   async captureImage() {
