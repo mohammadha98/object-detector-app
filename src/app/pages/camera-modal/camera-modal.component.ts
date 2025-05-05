@@ -185,6 +185,7 @@ export class CameraModalComponent implements OnInit, OnDestroy {
         // If stable for required time
         if (stableTime >= this.requiredStableTime && !this.isStable) {
           console.log('Camera feed has been stable for 5 seconds');
+          this.captureImage();
           this.isStable = true;
           
           // Optional: Auto-capture when stable
